@@ -2,68 +2,59 @@
 from backend.ai_service import generate_response
 
 
-def validate_study_plan(plan, hours, days):
-
-    prompt = f"""
-    Check this study plan.
-
-    Available hours per day: {hours}
-    Number of days: {days}
-
-    Study Plan:
-    {plan}
-
-    Check:
-    1. Does the plan contain exactly {days} days?
-    2. Does each day stay within {hours} study hours?
-
-    If valid, reply only: VALID
-
-    If invalid, explain the problems briefly.
-    """
-
-    result = generate_response(prompt)
-
-    return result.strip()
-
-
 def run_study_agent(subject, hours, days):
 
+    study_minutes = int(hours * 60)
+
+    if study_minutes < 3:
+        return "Please provide at least 3 minutes of study time."
+
     prompt = f"""
-    Create a practical study plan.
+    Create a concise {days}-day learning plan for {subject}.
 
-    Subject: {subject}
-    Available hours per day: {hours}
-    Number of days: {days}
+    Give exactly {days} numbered days.
+    For each day, provide:
+    - One learning topic
+    - One practical task
 
-    Divide topics into daily tasks.
-    Make sure each day stays within the available hours.
-    Include revision time.
+    Do not include timings or schedules.
+    Keep the response concise.
     """
 
-    plan = generate_response(prompt)
+    topics = generate_response(prompt)
 
-    validation = validate_study_plan(plan, hours, days)
+    study_time = study_minutes // 2
+    practice_time = study_minutes // 4
+    revision_time = study_minutes - study_time - practice_time
 
-    if validation != "VALID":
+    plan = f"AI Study Plan: {subject}\n"
 
-        correction_prompt = f"""
-        Correct this study plan based on the validation feedback.
+    for day in range(1, days + 1):
 
-        Subject: {subject}
-        Available hours per day: {hours}
-        Number of days: {days}
+        start = 10 * 60
+        study_end = start + study_time
+        practice_end = study_end + practice_time
+        revision_end = practice_end + revision_time
 
-        Original plan:
-        {plan}
+        def format_time(minutes):
+            hour = (minutes // 60) % 24
+            minute = minutes % 60
+            return f"{hour:02d}:{minute:02d}"
 
-        Validation feedback:
-        {validation}
+        plan += f"""
+### Day {day}
 
-        Return the corrected plan.
-        Make sure every day stays within the available hours.
-        """
+**Learning:** {format_time(start)} - {format_time(study_end)}
 
-        plan = generate_response(correction_prompt)
+**Practice:** {format_time(study_end)} - {format_time(practice_end)}
+
+**Revision:** {format_time(practice_end)} - {format_time(revision_end)}
+
+**Daily Total:** {hours} hours
+
+"""
+
+    plan += "\n### AI Suggested Topics and Tasks\n"
+    plan += topics
 
     return plan

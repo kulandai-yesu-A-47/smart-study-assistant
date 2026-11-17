@@ -1,18 +1,19 @@
 
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from pydantic import BaseModel
+from pathlib import Path
+
 from backend.ai_service import (
     generate_response,
     summarize_text,
     generate_quiz,
-    generate_study_plan,
     explain_topic
 )
-from fastapi import UploadFile, File, HTTPException
-from pathlib import Path
+
 from backend.pdf_service import extract_text
 from backend.rag_service import process_document, chat_with_document
 from backend.study_agent import run_study_agent
+
 
 app = FastAPI(
     title="AI Smart Study Assistant",
@@ -36,25 +37,30 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @app.post("/upload-pdf")
 async def upload_pdf(file: UploadFile = File(...)):
-
     if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(
-            status_code=400,
-            detail="Only PDF files are allowed"
-        )
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
 
     pdf_path = UPLOAD_DIR / Path(file.filename).name
-
     content = await file.read()
+
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded PDF is empty")
+
     pdf_path.write_bytes(content)
 
-    text = extract_text(str(pdf_path))
+    try:
+        text = extract_text(str(pdf_path))
+    except Exception:
+        pdf_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail="Invalid or unreadable PDF")
+
+    if not text.strip():
+        pdf_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail="PDF contains no readable text")
+
     document_id = process_document(text)
 
-    return {
-        "filename": file.filename,
-        "document_id": document_id
-    }
+    return {"filename": file.filename, "document_id": document_id}
 
 @app.post("/summarize-pdf")
 async def summarize_pdf(file: UploadFile = File(...)):
