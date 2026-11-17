@@ -97,3 +97,19 @@ Frontend URL: http://localhost:8501
 ## Project Purpose
 
 This project demonstrates practical applications of Large Language Models, document-based question answering, vector databases, and multi-step AI workflows to support student learning.
+## Screenshots
+
+### PDF Summarizer
+![PDF Summarizer](screenshots/pdf-summarizer.png)
+
+### Document Chatbot
+![Document Chatbot](screenshots/document-chatbot.png)
+
+### Quiz Generator
+![Quiz Generator](screenshots/quiz-generator.png)
+
+### Study Planner
+![Study Planner](screenshots/study-planner.png)
+
+### Learning Assistant
+![Learning Assistant](screenshots/learning-assistant.png)
