@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 
@@ -9,6 +8,22 @@ st.set_page_config(
 )
 
 API_URL = "http://127.0.0.1:8000"
+
+
+def call_api(endpoint, **kwargs):
+    """Calls the backend with a timeout and friendly error messages."""
+    try:
+        return requests.post(f"{API_URL}{endpoint}", timeout=600, **kwargs)
+    except requests.exceptions.ConnectionError:
+        st.error(
+            "Backend is not running. Start it first with: "
+            "uvicorn backend.main:app --reload"
+        )
+        st.stop()
+    except requests.exceptions.Timeout:
+        st.error("The AI took too long to respond. Try a smaller input.")
+        st.stop()
+
 
 st.title("📚 AI Smart Study Assistant")
 st.write("Your personal AI-powered learning assistant.")
@@ -42,8 +57,8 @@ if feature == "PDF Summarizer":
 
             with st.spinner("Generating summary..."):
 
-                response = requests.post(
-                    f"{API_URL}/summarize-pdf",
+                response = call_api(
+                    "/summarize-pdf",
                     files={
                         "file": (
                             uploaded_file.name,
@@ -78,8 +93,8 @@ if feature == "Document Chatbot":
 
             with st.spinner("Processing document..."):
 
-                response = requests.post(
-                    f"{API_URL}/upload-pdf",
+                response = call_api(
+                    "/upload-pdf",
                     files={
                         "file": (
                             uploaded_file.name,
@@ -108,8 +123,8 @@ if feature == "Document Chatbot":
 
                 with st.spinner("Finding the answer..."):
 
-                    response = requests.post(
-                        f"{API_URL}/chat-with-document",
+                    response = call_api(
+                        "/chat-with-document",
                         json={
                             "question": question,
                             "document_id": st.session_state["document_id"]
@@ -139,8 +154,8 @@ if feature == "Quiz Generator":
 
             with st.spinner("Generating quiz..."):
 
-                response = requests.post(
-                    f"{API_URL}/generate-quiz",
+                response = call_api(
+                    "/generate-quiz",
                     json={"text": study_text}
                 )
 
@@ -180,8 +195,8 @@ if feature == "Study Planner":
 
             with st.spinner("Creating your study plan..."):
 
-                response = requests.post(
-                    f"{API_URL}/generate-study-plan",
+                response = call_api(
+                    "/generate-study-plan",
                     json={
                         "subject": subject,
                         "hours": hours,
@@ -214,8 +229,8 @@ if feature == "Learning Assistant":
 
             with st.spinner("AI is preparing an explanation..."):
 
-                response = requests.post(
-                    f"{API_URL}/explain-topic",
+                response = call_api(
+                    "/explain-topic",
                     json={"topic": topic}
                 )
 

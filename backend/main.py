@@ -1,7 +1,8 @@
+import io
+from pathlib import Path
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from pydantic import BaseModel
-from pathlib import Path
 
 from backend.ai_service import (
     generate_response,
@@ -20,28 +21,36 @@ app = FastAPI(
     version="1.0.0"
 )
 
+
 class ChatRequest(BaseModel):
     prompt: str
+
 
 @app.get("/")
 def home():
     return {"message": "AI Smart Study Assistant is running!"}
+
 
 @app.post("/ask")
 def ask_ai(request: ChatRequest):
     answer = generate_response(request.prompt)
     return {"answer": answer}
 
+
 UPLOAD_DIR = Path("backend/uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+
+# NOTE: these are normal "def" (not "async def") because they call
+# blocking code (Ollama / ChromaDB). FastAPI runs them in a thread,
+# so the server does not freeze for other requests.
 @app.post("/upload-pdf")
-async def upload_pdf(file: UploadFile = File(...)):
+def upload_pdf(file: UploadFile = File(...)):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
 
     pdf_path = UPLOAD_DIR / Path(file.filename).name
-    content = await file.read()
+    content = file.file.read()
 
     if not content:
         raise HTTPException(status_code=400, detail="Uploaded PDF is empty")
@@ -62,26 +71,21 @@ async def upload_pdf(file: UploadFile = File(...)):
 
     return {"filename": file.filename, "document_id": document_id}
 
-@app.post("/summarize-pdf")
-async def summarize_pdf(file: UploadFile = File(...)):
 
+@app.post("/summarize-pdf")
+def summarize_pdf(file: UploadFile = File(...)):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(
             status_code=400,
             detail="Only PDF files are allowed"
         )
 
-    content = await file.read()
+    content = file.file.read()
 
-    import io
-    from pypdf import PdfReader
-
-    reader = PdfReader(io.BytesIO(content))
-
-    text = ""
-
-    for page in reader.pages:
-        text += page.extract_text() or ""
+    try:
+        text = extract_text(io.BytesIO(content))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid or unreadable PDF")
 
     if not text.strip():
         raise HTTPException(
@@ -95,6 +99,7 @@ async def summarize_pdf(file: UploadFile = File(...)):
         "filename": file.filename,
         "summary": summary
     }
+
 
 class DocumentChatRequest(BaseModel):
     question: str
@@ -115,6 +120,7 @@ def document_chat(request: DocumentChatRequest):
 class QuizRequest(BaseModel):
     text: str
 
+
 @app.post("/generate-quiz")
 def create_quiz(request: QuizRequest):
     quiz = generate_quiz(request.text)
@@ -122,6 +128,7 @@ def create_quiz(request: QuizRequest):
     return {
         "quiz": quiz
     }
+
 
 class StudyPlanRequest(BaseModel):
     subject: str
@@ -139,6 +146,7 @@ def create_study_plan(request: StudyPlanRequest):
     )
 
     return {"study_plan": plan}
+
 
 class ExplainRequest(BaseModel):
     topic: str

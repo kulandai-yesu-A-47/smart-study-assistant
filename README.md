@@ -7,7 +7,7 @@ An AI-powered learning assistant that helps students understand, summarize, and 
 1. **AI PDF Summarizer** – Summarizes uploaded PDF documents.
 2. **AI Document Chatbot** – Allows users to ask questions about uploaded PDFs using Retrieval-Augmented Generation (RAG).
 3. **AI Quiz Generator** – Generates multiple-choice questions from study materials.
-4. **AI Study Planner** – Creates and validates personalized study plans using a multi-step AI workflow.
+4. **AI Study Planner** – Creates personalized study plans using a multi-step AI workflow.
 5. **AI Learning Assistant** – Explains topics in simple English.
 
 ## Technologies Used

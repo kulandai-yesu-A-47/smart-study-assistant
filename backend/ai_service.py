@@ -1,5 +1,8 @@
-
 import ollama
+
+# Small model has a small context window, so we cut very long text
+MAX_CHARS = 6000
+
 
 def generate_response(prompt):
     response = ollama.chat(
@@ -16,6 +19,8 @@ def generate_response(prompt):
 
 
 def summarize_text(text):
+    text = text[:MAX_CHARS]
+
     prompt = f"""
     Summarize the following document.
     Give the main points in simple English.
@@ -26,7 +31,10 @@ def summarize_text(text):
 
     return generate_response(prompt)
 
+
 def generate_quiz(text):
+    text = text[:MAX_CHARS]
+
     prompt = f"""
     Create 5 multiple-choice questions based on the following document.
 
@@ -40,6 +48,7 @@ def generate_quiz(text):
     """
 
     return generate_response(prompt)
+
 
 def generate_study_plan(subject, hours, days):
     prompt = f"""
@@ -55,6 +64,7 @@ def generate_study_plan(subject, hours, days):
     """
 
     return generate_response(prompt)
+
 
 def explain_topic(topic):
     prompt = f"""

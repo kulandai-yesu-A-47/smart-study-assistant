@@ -14,16 +14,17 @@ def store_chunks(chunks):
 
     document_id = str(uuid.uuid4())
 
-    for index, chunk in enumerate(chunks):
+    if not chunks:
+        return document_id
 
-        collection.add(
-            ids=[f"{document_id}_{index}"],
-            documents=[chunk],
-            metadatas=[{"document_id": document_id}]
-        )
+    # One single call for all chunks (much faster than a loop)
+    collection.add(
+        ids=[f"{document_id}_{i}" for i in range(len(chunks))],
+        documents=chunks,
+        metadatas=[{"document_id": document_id}] * len(chunks)
+    )
 
     return document_id
-
 
 
 def search_chunks(query, document_id, limit=3):
@@ -38,4 +39,3 @@ def search_chunks(query, document_id, limit=3):
         return []
 
     return results["documents"][0]
-
