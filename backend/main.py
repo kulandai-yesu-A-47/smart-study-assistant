@@ -1,0 +1,147 @@
+
+from fastapi import FastAPI
+from pydantic import BaseModel
+from backend.ai_service import (
+    generate_response,
+    summarize_text,
+    generate_quiz,
+    generate_study_plan,
+    explain_topic
+)
+from fastapi import UploadFile, File, HTTPException
+from pathlib import Path
+from backend.pdf_service import extract_text
+from backend.rag_service import process_document, chat_with_document
+from backend.study_agent import run_study_agent
+
+app = FastAPI(
+    title="AI Smart Study Assistant",
+    version="1.0.0"
+)
+
+class ChatRequest(BaseModel):
+    prompt: str
+
+@app.get("/")
+def home():
+    return {"message": "AI Smart Study Assistant is running!"}
+
+@app.post("/ask")
+def ask_ai(request: ChatRequest):
+    answer = generate_response(request.prompt)
+    return {"answer": answer}
+
+UPLOAD_DIR = Path("backend/uploads")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+@app.post("/upload-pdf")
+async def upload_pdf(file: UploadFile = File(...)):
+
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF files are allowed"
+        )
+
+    pdf_path = UPLOAD_DIR / Path(file.filename).name
+
+    content = await file.read()
+    pdf_path.write_bytes(content)
+
+    text = extract_text(str(pdf_path))
+    document_id = process_document(text)
+
+    return {
+        "filename": file.filename,
+        "document_id": document_id
+    }
+
+@app.post("/summarize-pdf")
+async def summarize_pdf(file: UploadFile = File(...)):
+
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF files are allowed"
+        )
+
+    content = await file.read()
+
+    import io
+    from pypdf import PdfReader
+
+    reader = PdfReader(io.BytesIO(content))
+
+    text = ""
+
+    for page in reader.pages:
+        text += page.extract_text() or ""
+
+    if not text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="No readable text found in PDF"
+        )
+
+    summary = summarize_text(text)
+
+    return {
+        "filename": file.filename,
+        "summary": summary
+    }
+
+class DocumentChatRequest(BaseModel):
+    question: str
+    document_id: str
+
+
+@app.post("/chat-with-document")
+def document_chat(request: DocumentChatRequest):
+
+    answer = chat_with_document(
+        request.question,
+        request.document_id
+    )
+
+    return {"answer": answer}
+
+
+class QuizRequest(BaseModel):
+    text: str
+
+@app.post("/generate-quiz")
+def create_quiz(request: QuizRequest):
+    quiz = generate_quiz(request.text)
+
+    return {
+        "quiz": quiz
+    }
+
+class StudyPlanRequest(BaseModel):
+    subject: str
+    hours: int
+    days: int
+
+
+@app.post("/generate-study-plan")
+def create_study_plan(request: StudyPlanRequest):
+
+    plan = run_study_agent(
+        request.subject,
+        request.hours,
+        request.days
+    )
+
+    return {"study_plan": plan}
+
+class ExplainRequest(BaseModel):
+    topic: str
+
+
+@app.post("/explain-topic")
+def explain(request: ExplainRequest):
+    explanation = explain_topic(request.topic)
+
+    return {
+        "explanation": explanation
+    }
